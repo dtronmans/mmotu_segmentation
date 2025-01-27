@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             predicted = model(images)
-            loss = losses(images, masks)
+            loss = losses(predicted, masks)
             train_loss += loss.item()
 
             loss.backward()
@@ -63,8 +63,8 @@ if __name__ == "__main__":
                 images = batch['original'].to(device)
                 masks = batch['mask'].to(device)
 
-                predicted = model(images, masks)
-                loss = losses(images, masks)
+                predicted = model(images)
+                loss = losses(predicted, masks)
 
                 val_loss += loss.item()
 
