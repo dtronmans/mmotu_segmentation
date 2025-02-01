@@ -65,6 +65,7 @@ if __name__ == "__main__":
                 masks = batch['mask'].to(device)
 
                 predicted = model(images)
+                masks = torch.where(masks > 0, torch.tensor(1.0), masks)
                 loss = losses(predicted, masks)
 
                 val_loss += loss.item()
