@@ -25,7 +25,7 @@ class MMOTUSegmentationDataset(Dataset):
     def __getitem__(self, idx):
         file_name = self.filenames[idx]
         file_path = os.path.join(self.image_dir, file_name)
-        mask_path = os.path.join(self.annotated_dir, file_name).replace("JPG", "png")
+        mask_path = os.path.join(self.annotated_dir, file_name).replace(".JPG", "_binary.PNG")
 
         original_image = Image.open(file_path).convert("L")
         mask_image = Image.open(mask_path).convert("L")

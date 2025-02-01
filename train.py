@@ -18,7 +18,7 @@ if __name__ == "__main__":
     model.to(device)
 
     transform = transforms.Compose([
-        transforms.Resize((288, 512)),  # Resize to a fixed size
+        transforms.Resize((288, 288)),  # Resize to a fixed size
         transforms.ToTensor(),  # Convert to tensor
     ])
 
@@ -48,6 +48,7 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             predicted = model(images)
+            masks = torch.where(masks > 0, torch.tensor(1.0), masks)
             loss = losses(predicted, masks)
             train_loss += loss.item()
 
