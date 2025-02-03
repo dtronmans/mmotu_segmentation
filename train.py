@@ -22,7 +22,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),  # Convert to tensor
     ])
 
-    dataset = MMOTUSegmentationDataset(os.path.join("otu_2d", "OTU_2d"), transforms=transform)
+    dataset = MMOTUSegmentationDataset(os.path.join("/exports", "lkeb-hpc", "dzrogmans", "OTU_2d"), transforms=transform)
 
     train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2, random_state=42)
     train_dataset = torch.utils.data.Subset(dataset, train_indices)
@@ -31,12 +31,12 @@ if __name__ == "__main__":
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
 
-    train_loader = DataLoader(train_dataset, batch_size=2, shuffle=False)
-    val_loader = DataLoader(val_dataset, batch_size=2, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
     losses = BCEWithLogitsLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001)
-    num_epochs = 100
+    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    num_epochs = 4000
 
     for epoch in range(num_epochs):
         model.train()
@@ -72,5 +72,7 @@ if __name__ == "__main__":
 
         val_loss /= len(val_loader)
         print(f"Epoch {epoch}, Validation Loss: {val_loss}")
+        if epoch % 5 == 0:
+            torch.save(model.state_dict(), "mmotu_intermediate.pt")
 
     torch.save(model.state_dict(), "mmotu_segmentation.pt")

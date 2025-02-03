@@ -14,9 +14,12 @@ from architecture import UNet
 def infer_on_single_image(image_path, model, transform):
     image = Image.open(image_path).convert("L")
     ground_truth_path = image_path.replace("images", "annotations")
-    ground_truth_path = ground_truth_path.replace(".jpg", "_binary.png")
-    ground_truth_path = ground_truth_path.replace(".JPG", "_binary.PNG")
+    ground_truth_path = ground_truth_path.replace(".jpg", ".png")
+    ground_truth_path = ground_truth_path.replace(".JPG", ".PNG")
     ground_truth = Image.open(ground_truth_path).convert("L")
+
+    # image = image.transpose(Image.FLIP_LEFT_RIGHT)
+    # ground_truth = ground_truth.transpose(Image.FLIP_LEFT_RIGHT)
 
     image_tensor = transform(image).unsqueeze(0)
     ground_truth_tensor = transform(ground_truth)
@@ -48,6 +51,8 @@ def infer_on_single_image(image_path, model, transform):
             (point1[0], point1[1] - 10),
             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1
         )
+    else:
+        return
 
     # Display original image and mask
     fig, ax = plt.subplots(1, 3, figsize=(10, 5))
@@ -58,7 +63,7 @@ def infer_on_single_image(image_path, model, transform):
     ax[1].imshow(binary_mask_with_line)
     ax[1].set_title(f"Lesion Max Diameter: {int(max_diameter)} px")
     ax[1].axis("off")
-
+    #
     ax[2].imshow(ground_truth_tensor.squeeze(), cmap="gray")
     ax[2].set_title("Ground Truth Mask")
     ax[2].axis("off")
@@ -67,9 +72,10 @@ def infer_on_single_image(image_path, model, transform):
 
     return max_diameter
 
+
 if __name__ == "__main__":
     model = UNet(1, 1)
-    model.load_state_dict(torch.load("mmotu_segmentation.pt", weights_only=True, map_location=torch.device("cpu")))
+    model.load_state_dict(torch.load("mmotu_275.pt", weights_only=True, map_location=torch.device("cpu")))
     model.eval()
 
     transform = transforms.Compose([
@@ -77,7 +83,6 @@ if __name__ == "__main__":
         transforms.ToTensor(),  # Convert to tensor
     ])
 
-    images_path = os.path.join("otu_2d", "OTU_2d", "images")
+    images_path = os.path.join("independent_test", "images")
     for image in os.listdir(images_path):
         infer_on_single_image(os.path.join(images_path, image), model, transform)
-

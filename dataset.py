@@ -1,4 +1,6 @@
 import os
+import torchvision.transforms.functional as TF
+import random
 from threading import Thread
 
 import numpy as np
@@ -33,6 +35,14 @@ class MMOTUSegmentationDataset(Dataset):
         if self.transforms:
             original_image = self.transforms(original_image)
             mask_image = self.transforms(mask_image)
+
+        if random.random() > 0.5:
+            original_image = TF.hflip(original_image)
+            mask_image = TF.hflip(mask_image)
+
+        if random.random() > 0.5:
+            original_image = TF.vflip(original_image)
+            mask_image = TF.vflip(mask_image)
 
         return {"original": original_image, "mask": mask_image}
 
