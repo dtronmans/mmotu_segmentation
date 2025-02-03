@@ -55,7 +55,7 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-        print(f"Epoch {epoch}, Train Loss: {loss.item()}")
+        print(f"Epoch {epoch}, Train Loss: {train_loss:.2f}")
 
         model.eval()
         val_loss = 0.0
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                 val_loss += loss.item()
 
         val_loss /= len(val_loader)
-        print(f"Epoch {epoch}, Validation Loss: {val_loss}")
+        print(f"Epoch {epoch}, Validation Loss: {val_loss:.2f}")
         if epoch % 5 == 0:
             torch.save(model.state_dict(), "mmotu_intermediate.pt")
 
