@@ -31,11 +31,11 @@ if __name__ == "__main__":
     print("Train dataset length: " + str(len(train_dataset)))
     print("Val dataset length: " + str(len(val_dataset)))
 
-    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
     losses = BCEWithLogitsLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
     num_epochs = 4000
 
     for epoch in range(num_epochs):
@@ -48,13 +48,14 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             predicted = model(images)
-            masks = torch.where(masks > 0, torch.tensor(1.0), masks)
+            masks = (masks > 0).float()
             loss = losses(predicted, masks)
             train_loss += loss.item()
 
             loss.backward()
             optimizer.step()
 
+        train_loss /= len(train_loader)
         print(f"Epoch {epoch}, Train Loss: {train_loss:.2f}")
 
         model.eval()
@@ -65,13 +66,14 @@ if __name__ == "__main__":
                 masks = batch['mask'].to(device)
 
                 predicted = model(images)
-                masks = torch.where(masks > 0, torch.tensor(1.0), masks)
+                masks = (masks > 0).float()
                 loss = losses(predicted, masks)
 
                 val_loss += loss.item()
 
         val_loss /= len(val_loader)
         print(f"Epoch {epoch}, Validation Loss: {val_loss:.2f}")
+
         if epoch % 5 == 0:
             torch.save(model.state_dict(), "mmotu_intermediate.pt")
 
