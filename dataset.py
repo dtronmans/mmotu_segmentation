@@ -6,6 +6,7 @@ from threading import Thread
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
+from torchvision import transforms
 
 
 class UnlabeledDataset(Dataset):
@@ -29,13 +30,14 @@ class UnlabeledDataset(Dataset):
 
 class MMOTUSegmentationDataset(Dataset):
 
-    def __init__(self, dataset_path, transforms=None):
+    def __init__(self, dataset_path, transform=None):
         self.dataset_path = dataset_path
         self.image_dir = os.path.join(dataset_path, "images")
         self.annotated_dir = os.path.join(dataset_path, "annotations")
-        self.transforms = transforms
+        self.transform = transform
 
         self.filenames = sorted(os.listdir(self.image_dir))
+        self.resize = transforms.Resize((384, 384))
 
     def __len__(self):
         return len(self.filenames)
@@ -50,6 +52,9 @@ class MMOTUSegmentationDataset(Dataset):
 
         original_image = Image.open(file_path).convert("L")
         mask_image = Image.open(mask_path).convert("L")
+
+        original_image = self.resize(original_image)
+        mask_image = self.resize(mask_image)
 
         mask_image = TF.to_tensor(mask_image)
         mask_image = (mask_image > 0).float()

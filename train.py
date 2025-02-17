@@ -18,7 +18,6 @@ if __name__ == "__main__":
     model.to(device)
 
     transform = transforms.Compose([
-        transforms.Resize((384, 384)),
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.GaussianBlur(kernel_size=3),
         transforms.ToTensor(),
