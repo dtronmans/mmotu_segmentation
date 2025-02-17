@@ -68,8 +68,8 @@ class MMOTUSegmentationDataset(Dataset):
             mask_image = TF.vflip(mask_image)
 
         # Apply image-only augmentations
-        if self.transforms:
-            original_image = self.transforms(original_image)
+        if self.transform:
+            original_image = self.transform(original_image)
 
         return {"original": original_image, "mask": mask_image}
 
