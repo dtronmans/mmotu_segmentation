@@ -23,7 +23,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
     ])
 
-    dataset = MMOTUSegmentationDataset(os.path.join("/exports", "lkeb-hpc", "dzrogmans", "OTU_2d"), transforms=transform)
+    dataset = MMOTUSegmentationDataset(os.path.join("/exports", "lkeb-hpc", "dzrogmans", "OTU_2d"), transform=transform)
 
     train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2, random_state=42)
     train_dataset = torch.utils.data.Subset(dataset, train_indices)
