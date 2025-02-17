@@ -62,11 +62,6 @@ class MMOTUSegmentationDataset(Dataset):
             original_image = TF.vflip(original_image)
             mask_image = TF.vflip(mask_image)
 
-        if random.random() > 0.5:
-            angle = random.uniform(-15, 15)
-            original_image = TF.rotate(original_image, angle)
-            mask_image = TF.rotate(mask_image, angle)
-
         # Apply image-only augmentations
         if self.transforms:
             original_image = self.transforms(original_image)
