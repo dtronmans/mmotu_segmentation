@@ -6,23 +6,64 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import cv2
 from scipy.spatial.distance import pdist, squareform
+from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from architecture import UNet
+from dataset import MMOTUSegmentationDataset, UnlabeledDataset
 
 
-def infer_on_single_image(image_path, model, transform):
+def adapt_batch_norm(model, dataloader, device):
+    model.train()
+
+    with torch.no_grad():
+        for batch in dataloader:
+            images = batch.to(device)
+            _ = model(images)  # Forward pass
+
+    model.eval()  # Switch back to eval mode
+    return model
+
+
+def load_histogram_data(histogram_path="average_histogram.npz"):
+    data = np.load(histogram_path)
+    return data["histogram"], data["cdf"]
+
+
+def apply_histogram_matching(image, ref_cdf):
+    img_hist, bin_edges = np.histogram(image.flatten(), bins=256, range=(0, 256), density=True)
+    img_cdf = np.cumsum(img_hist)  # Compute the cumulative distribution function
+    img_cdf = img_cdf / img_cdf[-1]  # Normalize to [0,1]
+
+    # Create a mapping from input image CDF to reference CDF
+    matched_values = np.interp(img_cdf, ref_cdf, np.arange(256))
+
+    # Apply the mapping to the input image
+    matched_image = np.interp(image.flatten(), bin_edges[:-1], matched_values)
+    matched_image = matched_image.reshape(image.shape).astype(np.uint8)
+
+    return matched_image
+
+
+def infer_on_single_image(image_path, model, transform, histogram_path="average_histogram.npz", histogram=False):
+    avg_hist, ref_cdf = load_histogram_data(histogram_path)
+
     image = Image.open(image_path).convert("L")
-    ground_truth_path = image_path.replace("images", "annotations")
-    ground_truth_path = ground_truth_path.replace(".jpg", ".png")
-    ground_truth_path = ground_truth_path.replace(".JPG", ".PNG")
-    ground_truth = Image.open(ground_truth_path).convert("L")
 
-    # image = image.transpose(Image.FLIP_LEFT_RIGHT)
-    # ground_truth = ground_truth.transpose(Image.FLIP_LEFT_RIGHT)
+    if histogram:
+        image_np = np.array(image)
+        matched_image_np = apply_histogram_matching(image_np, ref_cdf)
+        image = Image.fromarray(matched_image_np)
+    # ground_truth_path = image_path.replace("images", "annotations")
+    # ground_truth_path = ground_truth_path.replace(".jpg", ".png")
+    # ground_truth_path = ground_truth_path.replace(".JPG", ".PNG")
+    # ground_truth = Image.open(ground_truth_path).convert("L")
+    #
+    # image = image.transpose(Image.FLIP_TOP_BOTTOM)
+    # ground_truth = ground_truth.transpose(Image.FLIP_TOP_BOTTOM)
 
     image_tensor = transform(image).unsqueeze(0)
-    ground_truth_tensor = transform(ground_truth)
+    # ground_truth_tensor = transform(ground_truth)
 
     with torch.no_grad():
         prediction = model(image_tensor)
@@ -54,6 +95,9 @@ def infer_on_single_image(image_path, model, transform):
     else:
         return
 
+    image_np = image_tensor.squeeze().squeeze().numpy() * 255
+    overlay = cv2.addWeighted(image_np, 0.5, binary_mask, 0.5, 0, dtype=cv2.CV_32F)
+
     # Display original image and mask
     fig, ax = plt.subplots(1, 3, figsize=(10, 5))
     ax[0].imshow(image_tensor.squeeze(), cmap="gray")
@@ -64,25 +108,39 @@ def infer_on_single_image(image_path, model, transform):
     ax[1].set_title(f"Lesion Max Diameter: {int(max_diameter)} px")
     ax[1].axis("off")
     #
-    ax[2].imshow(ground_truth_tensor.squeeze(), cmap="gray")
-    ax[2].set_title("Ground Truth Mask")
+    ax[2].imshow(overlay, cmap="gray")
+    ax[2].set_title("Overlay of Mask on Image")
     ax[2].axis("off")
-
+    #
+    # ax[3].imshow(ground_truth_tensor.squeeze(), cmap="gray")
+    # ax[3].set_title("Ground Truth Mask")
+    # ax[3].axis("off")
+    #
     plt.show()
 
-    return max_diameter
+    return max_diameter, binary_mask
 
 
 if __name__ == "__main__":
     model = UNet(1, 1)
-    model.load_state_dict(torch.load("mmotu_275.pt", weights_only=True, map_location=torch.device("cpu")))
+    model.load_state_dict(torch.load("mmotu_segm_new.pt", weights_only=True, map_location=torch.device("cpu")))
     model.eval()
+
+    transform = transforms.Compose([
+        transforms.Resize((288, 288)),
+        transforms.ToTensor(),
+    ])
+
+    our_dataset = UnlabeledDataset("benign/images", transforms=transform)
+    our_dataloader = DataLoader(our_dataset, batch_size=4, shuffle=False)
+    # model = adapt_batch_norm(model, our_dataloader, "cpu")
 
     transform = transforms.Compose([
         transforms.Resize((288, 288)),  # Resize to a fixed size
         transforms.ToTensor(),  # Convert to tensor
     ])
 
-    images_path = os.path.join("independent_test", "images")
+    images_path = os.path.join("benign", "images")
     for image in os.listdir(images_path):
-        infer_on_single_image(os.path.join(images_path, image), model, transform)
+        max_diameter, binary_mask = infer_on_single_image(os.path.join(images_path, image), model, transform, histogram=False)
+        print()

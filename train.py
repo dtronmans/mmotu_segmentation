@@ -18,7 +18,7 @@ if __name__ == "__main__":
     model.to(device)
 
     transform = transforms.Compose([
-        transforms.Resize((288, 288)),  # Resize to a fixed size
+        transforms.Resize((384, 384)),  # Resize to a fixed size
         transforms.ToTensor(),  # Convert to tensor
     ])
 
@@ -35,7 +35,7 @@ if __name__ == "__main__":
     val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
     losses = BCEWithLogitsLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-5)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=0.0005, momentum=0.9)
     num_epochs = 4000
 
     for epoch in range(num_epochs):

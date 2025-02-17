@@ -8,6 +8,25 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 
+class UnlabeledDataset(Dataset):
+
+    def __init__(self, dataset_path, transforms=None):
+        self.dataset_path = dataset_path
+        self.transforms = transforms
+
+        self.filenames = sorted(os.listdir(self.dataset_path))
+
+    def __len__(self):
+        return len(self.filenames)
+
+    def __getitem__(self, idx):
+        file_name = self.filenames[idx]
+        file_path = os.path.join(self.dataset_path, file_name)
+
+        image = Image.open(file_path).convert("L")
+        image = self.transforms(image)
+        return image
+
 class MMOTUSegmentationDataset(Dataset):
 
     def __init__(self, dataset_path, transforms=None):
