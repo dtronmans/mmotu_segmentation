@@ -18,8 +18,10 @@ if __name__ == "__main__":
     model.to(device)
 
     transform = transforms.Compose([
-        transforms.Resize((384, 384)),  # Resize to a fixed size
-        transforms.ToTensor(),  # Convert to tensor
+        transforms.Resize((384, 384)),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2),
+        transforms.GaussianBlur(kernel_size=3),
+        transforms.ToTensor(),
     ])
 
     dataset = MMOTUSegmentationDataset(os.path.join("/exports", "lkeb-hpc", "dzrogmans", "OTU_2d"), transforms=transform)
