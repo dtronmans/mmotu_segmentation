@@ -11,6 +11,7 @@ from torchvision import transforms
 
 from architecture import UNet
 from dataset import MMOTUSegmentationDataset, UnlabeledDataset
+from expand_and_crop import crop_and_expand_image
 
 
 def adapt_batch_norm(model, dataloader, device):
@@ -44,7 +45,7 @@ def apply_histogram_matching(image, ref_cdf):
 
 
 def infer(image_path, model, transform, histogram_path="average_histogram.npz", histogram=False,
-          ground_truth_exists=False):
+          ground_truth_exists=False, expand_and_crop=False):
     image = Image.open(image_path).convert("L")
 
     if histogram:
@@ -77,15 +78,22 @@ def infer(image_path, model, transform, histogram_path="average_histogram.npz", 
     image_np = image_tensor.squeeze().squeeze().numpy() * 255
     overlay = cv2.addWeighted(image_np, 0.5, binary_mask, 0.5, 0, dtype=cv2.CV_32F)
 
-    display_results(image_tensor, binary_mask_with_line, overlay, max_diameter, black_pixel_ratio, ground_truth_exists, ground_truth_tensor)
+    cropped_image = None
+    if expand_and_crop:
+        cropped_image = crop_and_expand_image(image_path, binary_mask, transform)
+
+    display_results(image_tensor, binary_mask_with_line, overlay, max_diameter, black_pixel_ratio, ground_truth_exists,
+                    ground_truth_tensor, cropped_image)
 
     return max_diameter, binary_mask
 
 
-
-def display_results(image_tensor, binary_mask_with_line, overlay, max_diameter, black_pixel_ratio, ground_truth_exists=False,
-                    ground_truth_tensor=None):
+def display_results(image_tensor, binary_mask_with_line, overlay, max_diameter, black_pixel_ratio,
+                    ground_truth_exists=False,
+                    ground_truth_tensor=None,
+                    cropped_image=None):
     display_columns = 4 if ground_truth_exists else 3
+    display_columns = display_columns + 1 if cropped_image is not None else display_columns
 
     fig, ax = plt.subplots(1, display_columns, figsize=(12, 5))
     ax[0].imshow(image_tensor.squeeze(), cmap="gray")
@@ -97,13 +105,18 @@ def display_results(image_tensor, binary_mask_with_line, overlay, max_diameter, 
     ax[1].axis("off")
 
     ax[2].imshow(overlay, cmap="gray")
-    ax[2].set_title(f"Mask Overlay\nBlack Pixel Ratio: {black_pixel_ratio:.2f}")
+    ax[2].set_title(f"Mask Overlay")
     ax[2].axis("off")
 
     if ground_truth_exists and ground_truth_tensor:
         ax[3].imshow(ground_truth_tensor.squeeze(), cmap="gray")
         ax[3].set_title("Ground Truth Mask")
         ax[3].axis("off")
+
+    if cropped_image is not None:
+        ax[-1].imshow(cropped_image, cmap="gray")
+        ax[-1].set_title(f"Cropped image\nBlack Pixel Ratio: {black_pixel_ratio:.2f}")
+        ax[-1].axis("off")
 
     plt.show()
 
@@ -138,17 +151,30 @@ def calculate_black_pixel_ratio(image_tensor, binary_mask):
     image_np = image_tensor.squeeze().numpy() * 255
     masked_pixels = image_np[binary_mask == 255]
 
+    masked_pixels = min_max_normalize_255(masked_pixels)
+
     if masked_pixels.size == 0:
         return 0.0
 
-    black_pixels = np.sum(masked_pixels < 30)
+    print(np.min(masked_pixels))
+    black_pixels = np.sum(masked_pixels < 80)
     ratio = black_pixels / masked_pixels.size
     return ratio
 
 
+def min_max_normalize_255(arr):
+    arr_min = np.min(arr)
+    arr_max = np.max(arr)
+
+    if arr_max == arr_min:
+        return np.zeros_like(arr)  # Avoid division by zero if all values are the same
+
+    normalized_arr = (arr - arr_min) / (arr_max - arr_min)
+    return normalized_arr * 255
+
 if __name__ == "__main__":
     model = UNet(1, 1)
-    model.load_state_dict(torch.load("mmotu_feb17.pt", weights_only=True, map_location=torch.device("cpu")))
+    model.load_state_dict(torch.load("mmotu_50.pt", weights_only=True, map_location=torch.device("cpu")))
     model.eval()
 
     transform = transforms.Compose([
@@ -158,14 +184,15 @@ if __name__ == "__main__":
 
     our_dataset = UnlabeledDataset("benign/images", transforms=transform)
     our_dataloader = DataLoader(our_dataset, batch_size=4, shuffle=False)
-    model = adapt_batch_norm(model, our_dataloader, "cpu")
+    # model = adapt_batch_norm(model, our_dataloader, "cpu")
 
     transform = transforms.Compose([
-        transforms.Resize((384, 384)),  # Resize to a fixed size
-        transforms.ToTensor(),  # Convert to tensor
+        transforms.Resize((384, 384)),
+        transforms.ToTensor(),
     ])
 
-    images_path = os.path.join("benign", "images")
+    images_path = os.path.join("LUMC_RDG_only_ovary", "malignant")
     for image in os.listdir(images_path):
-        max_diameter, binary_mask = infer(os.path.join(images_path, image), model, transform, histogram=False)
+        max_diameter, binary_mask = infer(os.path.join(images_path, image), model, transform, histogram=True,
+                                          expand_and_crop=True)
         print()

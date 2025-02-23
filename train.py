@@ -21,6 +21,7 @@ if __name__ == "__main__":
         transforms.ColorJitter(brightness=0.2, contrast=0.2),
         transforms.GaussianBlur(kernel_size=3),
         transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
     dataset = MMOTUSegmentationDataset(os.path.join("/exports", "lkeb-hpc", "dzrogmans", "OTU_2d"), transform=transform)
