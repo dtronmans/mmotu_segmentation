@@ -13,7 +13,7 @@ from architecture import UNet
 from dataset import MMOTUSegmentationDataset
 
 if __name__ == "__main__":
-    model = UNet(1, 1)
+    model = UNet(3, 1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
