@@ -46,7 +46,7 @@ def apply_histogram_matching(image, ref_cdf):
 
 def infer(image_path, model, transform, histogram_path="average_histogram.npz", histogram=False,
           ground_truth_exists=False, expand_and_crop=False):
-    image = Image.open(image_path).convert("L")
+    image = Image.open(image_path)
 
     if histogram:
         avg_hist, ref_cdf = load_histogram_data(histogram_path)
@@ -105,7 +105,7 @@ def display_results(image_tensor, binary_mask_with_line, overlay, max_diameter, 
     ax[1].axis("off")
 
     ax[2].imshow(overlay, cmap="gray")
-    ax[2].set_title(f"Mask Overlay")
+    ax[2].set_title(f"Mask Overlay\nBlack Pixel Ratio: {black_pixel_ratio:.2f}")
     ax[2].axis("off")
 
     if ground_truth_exists and ground_truth_tensor:
@@ -151,13 +151,10 @@ def calculate_black_pixel_ratio(image_tensor, binary_mask):
     image_np = image_tensor.squeeze().numpy() * 255
     masked_pixels = image_np[binary_mask == 255]
 
-    masked_pixels = min_max_normalize_255(masked_pixels)
-
     if masked_pixels.size == 0:
         return 0.0
 
-    print(np.min(masked_pixels))
-    black_pixels = np.sum(masked_pixels < 80)
+    black_pixels = np.sum(masked_pixels < -100)
     ratio = black_pixels / masked_pixels.size
     return ratio
 
@@ -172,27 +169,24 @@ def min_max_normalize_255(arr):
     normalized_arr = (arr - arr_min) / (arr_max - arr_min)
     return normalized_arr * 255
 
+
 if __name__ == "__main__":
     model = UNet(1, 1)
-    model.load_state_dict(torch.load("mmotu_50.pt", weights_only=True, map_location=torch.device("cpu")))
+    model.load_state_dict(torch.load("mmotu_intermediate_grayscale.pt", weights_only=False, map_location=torch.device("cpu")))
     model.eval()
 
     transform = transforms.Compose([
-        transforms.Resize((384, 384)),
         transforms.ToTensor(),
+        transforms.Resize((384, 384)),
+        transforms.Normalize(mean=[0.5], std=[0.5])
     ])
 
-    our_dataset = UnlabeledDataset("benign/images", transforms=transform)
-    our_dataloader = DataLoader(our_dataset, batch_size=4, shuffle=False)
+    # our_dataset = UnlabeledDataset("benign/images", transforms=transform)
+    # our_dataloader = DataLoader(our_dataset, batch_size=4, shuffle=False)
     # model = adapt_batch_norm(model, our_dataloader, "cpu")
 
-    transform = transforms.Compose([
-        transforms.Resize((384, 384)),
-        transforms.ToTensor(),
-    ])
-
-    images_path = os.path.join("LUMC_RDG_only_ovary", "malignant")
+    images_path = os.path.join("benign", "images")
     for image in os.listdir(images_path):
-        max_diameter, binary_mask = infer(os.path.join(images_path, image), model, transform, histogram=True,
+        max_diameter, binary_mask = infer(os.path.join(images_path, image), model, transform, histogram=False,
                                           expand_and_crop=True)
         print()

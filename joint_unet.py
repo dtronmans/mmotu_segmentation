@@ -49,3 +49,20 @@ class UNetWithClassification(nn.Module):
         class_logits = self.classifier(x5)  # Classification output
 
         return seg_logits, class_logits
+
+def transfer_unet_weights(unet_model_path):
+    joint_model = UNetWithClassification(3, 1, 1)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    unet_weights = torch.load(unet_model_path, weights_only=True, map_location=device)
+
+    joint_model_state = joint_model.state_dict()
+
+    transfer_weights = {k: v for k, v in unet_weights.items() if
+                        k in joint_model_state and v.shape == joint_model_state[k].shape}
+
+    joint_model_state.update(transfer_weights)
+    joint_model.load_state_dict(joint_model_state)
+
+    print(f"Transferred {len(transfer_weights)}/{len(unet_weights)} layers from U-Net to joint model.")
+
+    return joint_model

@@ -1,9 +1,7 @@
 import os
 import torchvision.transforms.functional as TF
 import random
-from threading import Thread
 
-import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -28,6 +26,7 @@ class UnlabeledDataset(Dataset):
         image = self.transforms(image)
         return image
 
+
 class MMOTUSegmentationDataset(Dataset):
 
     def __init__(self, dataset_path, transform=None):
@@ -50,7 +49,7 @@ class MMOTUSegmentationDataset(Dataset):
         file_path = os.path.join(self.image_dir, file_name)
         mask_path = os.path.join(self.annotated_dir, file_name).replace(".JPG", "_binary.PNG")
 
-        original_image = Image.open(file_path).convert("L")
+        original_image = Image.open(file_path).convert("RGB")
         mask_image = Image.open(mask_path).convert("L")
 
         original_image = self.resize(original_image)
