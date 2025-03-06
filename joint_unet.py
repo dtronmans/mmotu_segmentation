@@ -50,6 +50,23 @@ class UNetWithClassification(nn.Module):
 
         return seg_logits, class_logits
 
+def only_classification_model(model):
+    model.train()
+
+    for param in model.up1.parameters():
+        param.requires_grad = False
+    for param in model.up2.parameters():
+        param.requires_grad = False
+    for param in model.up3.parameters():
+        param.requires_grad = False
+    for param in model.up4.parameters():
+        param.requires_grad = False
+    for param in model.outc.parameters():
+        param.requires_grad = False
+
+
+
+
 def transfer_unet_weights(unet_model_path):
     joint_model = UNetWithClassification(3, 1, 1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -64,5 +81,6 @@ def transfer_unet_weights(unet_model_path):
     joint_model.load_state_dict(joint_model_state)
 
     print(f"Transferred {len(transfer_weights)}/{len(unet_weights)} layers from U-Net to joint model.")
+
 
     return joint_model

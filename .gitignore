@@ -3,3 +3,4 @@
 *.tif
 *.xlsx
 __pycache__
+*.pt
