@@ -6,16 +6,23 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 
-from joint_unet import UNetWithClassification
+from joint_unet import UNetWithClassification, only_classification_model
 from multimodal_hospital_lesion_dataset import MultimodalHospitalLesionDataset
 
 if __name__ == "__main__":
     model = UNetWithClassification(3, 1, 1, use_clinical_features=True)
+    model = only_classification_model(model)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
 
-    transform = transforms.ToTensor()
-    target_transform = transforms.ToTensor()
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Resize((336, 544))
+    ])
+    target_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Resize((336, 544))
+    ])
 
     dataset = MultimodalHospitalLesionDataset("lesion_segmentation", "lesion_segmentation/patient_attributes.csv",
                                               transform, target_transform)

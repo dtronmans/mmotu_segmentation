@@ -7,16 +7,17 @@ from torchvision import transforms
 from tqdm import tqdm
 
 from hospital_lesion_dataset import UltrasoundDataset
-from joint_unet import UNetWithClassification
+from joint_unet import UNetWithClassification, only_classification_model
 
 if __name__ == "__main__":
     model = UNetWithClassification(3, 1, 1)
+    model = only_classification_model(model)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.load_state_dict(torch.load("joint_unet_normalized.pt", weights_only=True, map_location=device))
 
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+        transforms.Resize((336, 544))
     ])
 
     dataset = UltrasoundDataset("rdgg_sorted", transforms=transform)

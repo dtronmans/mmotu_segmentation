@@ -82,6 +82,8 @@ def only_classification_model(model):
     for param in model.outc.parameters():
         param.requires_grad = False
 
+    return model
+
 
 def transfer_unet_weights(unet_model_path):
     joint_model = UNetWithClassification(3, 1, 1)
