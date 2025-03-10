@@ -1,4 +1,6 @@
 import os
+
+import pandas as pd
 from PIL import Image
 import torch
 from torch.utils.data import Dataset
@@ -117,9 +119,10 @@ if __name__ == "__main__":
         transforms.ToTensor()
     ])
     target_transform = transforms.ToTensor()
-    dataset = HospitalLesionDataset("lesion_segmentation", transform=transform, target_transform=target_transform)
-    image, mask_tensor, classification_label = dataset[1]
-    image = image.unsqueeze(0)
-    joint_unet = UNetWithClassification(3, 2, 2)
-    prediction = joint_unet(image)
-    print()
+    dataset = HospitalLesionDataset("lesion_segmentation", transform=transform, target_transform=target_transform,
+                                    clinical_features_csv="lumc_rdgg_attributes.csv")
+    # image, mask_tensor, classification_label = dataset[1]
+    # image = image.unsqueeze(0)
+    # joint_unet = UNetWithClassification(3, 2, 2)
+    # prediction = joint_unet(image)
+    # print()

@@ -1,17 +1,18 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from architecture import DoubleConv, Down, Up, OutConv
 
 
 class UNetWithClassification(nn.Module):
-    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes, bilinear=False):
+    def __init__(self, n_channels, n_segmentation_classes, num_classification_classes,
+                 use_clinical_features=False, num_clinical_features=2, bilinear=False):
         super(UNetWithClassification, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_segmentation_classes
         self.num_classes = num_classification_classes
         self.bilinear = bilinear
+        self.use_clinical_features = use_clinical_features
 
         self.inc = (DoubleConv(n_channels, 64))
         self.down1 = (Down(64, 128))
@@ -26,13 +27,20 @@ class UNetWithClassification(nn.Module):
         self.up4 = (Up(128, 64, bilinear))
         self.outc = (OutConv(64, n_segmentation_classes))
 
-        self.classifier = nn.Sequential(
-            nn.AdaptiveAvgPool2d(1),
-            nn.Flatten(),
-            nn.Linear(1024 // factor, num_classification_classes)
-        )
+        self.feature_dim = 1024 // factor
 
-    def forward(self, x):
+        self.classifier = nn.Linear(self.feature_dim, num_classification_classes)
+
+        # Clinical Features Encoding (Maps clinical features to the same space as x5)
+        if self.use_clinical_features:
+            self.clinical_encoder = nn.Sequential(
+                nn.Linear(num_clinical_features, 16),  # Map clinical features to 16D
+                nn.ReLU(),
+                nn.Linear(16, self.feature_dim),  # Project to same latent space
+                nn.Sigmoid()  # Produces scaling factors (like attention)
+            )
+
+    def forward(self, x, clinical_features=None):
         # Encoder
         x1 = self.inc(x)
         x2 = self.down1(x1)
@@ -46,9 +54,16 @@ class UNetWithClassification(nn.Module):
         x_seg = self.up4(x_seg, x1)
         seg_logits = self.outc(x_seg)
 
-        class_logits = self.classifier(x5)  # Classification output
+        class_features = x5.view(x5.shape[0], -1)
+
+        if self.use_clinical_features and clinical_features is not None:
+            clinical_embedding = self.clinical_encoder(clinical_features)  # (batch, feature_dim)
+            class_features = class_features * (1 + clinical_embedding)  # FiLM: Modulate instead of adding
+
+        class_logits = self.classifier(class_features)  # Classification output
 
         return seg_logits, class_logits
+
 
 def only_classification_model(model):
     model.train()
@@ -65,8 +80,6 @@ def only_classification_model(model):
         param.requires_grad = False
 
 
-
-
 def transfer_unet_weights(unet_model_path):
     joint_model = UNetWithClassification(3, 1, 1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -81,6 +94,5 @@ def transfer_unet_weights(unet_model_path):
     joint_model.load_state_dict(joint_model_state)
 
     print(f"Transferred {len(transfer_weights)}/{len(unet_weights)} layers from U-Net to joint model.")
-
 
     return joint_model

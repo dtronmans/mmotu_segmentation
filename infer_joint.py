@@ -48,14 +48,14 @@ def infer_directory(model, dataloader, unlabeled=True):
 if __name__ == "__main__":
     model = UNetWithClassification(3, 1, 1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.load_state_dict(torch.load("joint_unet_normalized.pt", weights_only=True, map_location=device))
+    model.load_state_dict(torch.load("joint_unet_no_haga.pt", weights_only=True, map_location=device))
     model.eval()
     #
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
     target_transform = transforms.ToTensor()
     #
-    dataset = HospitalLesionDataset("lesion_segmentation", transform=transform, target_transform=target_transform)
+    dataset = UnlabeledLesionDataset("../util_scripts_2/image_datasets/lumc_rdg_png", transform=transform)
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
     #
-    infer_directory(model, dataloader, unlabeled=False)
+    infer_directory(model, dataloader, unlabeled=True)

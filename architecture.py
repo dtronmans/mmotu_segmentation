@@ -70,7 +70,7 @@ class Down(nn.Module):
 
 class Up(nn.Module):
 
-    def __init__(self, in_channels, out_channels, bilinear=True):
+    def __init__(self, in_channels, out_channels, bilinear=False):
         super().__init__()
 
         if bilinear:
