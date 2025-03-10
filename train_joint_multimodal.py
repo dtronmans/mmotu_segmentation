@@ -25,6 +25,7 @@ if __name__ == "__main__":
         transforms.ToTensor(),
         transforms.Resize((336, 544))
     ])
+    # transform, target_transform = transforms.ToTensor(), transforms.ToTensor()
 
     db_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "lesion_segmentation_multimodal", "lesion_segmentation")
     csv_path = os.path.join(db_path, "patient_attributes.csv")

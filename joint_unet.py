@@ -27,11 +27,14 @@ class UNetWithClassification(nn.Module):
         self.up4 = (Up(128, 64, bilinear))
         self.outc = (OutConv(64, n_segmentation_classes))
 
-        self.feature_dim = 1024 // factor
+        self.feature_dim = (1024 // factor) * 21 * 34  # Flattened feature size
 
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
-
-        self.classifier = nn.Linear(self.feature_dim, num_classification_classes)
+        # Updated classifier using Flatten and MLP
+        self.classifier = nn.Sequential(
+            nn.Linear(self.feature_dim, 512),
+            nn.ReLU(),
+            nn.Linear(512, num_classification_classes)
+        )
 
         # Clinical Features Encoding (Maps clinical features to the same space as x5)
         if self.use_clinical_features:
@@ -56,14 +59,13 @@ class UNetWithClassification(nn.Module):
         x_seg = self.up4(x_seg, x1)
         seg_logits = self.outc(x_seg)
 
-        x_pooled = self.global_pool(x5)
-        class_features = x_pooled.view(x_pooled.shape[0], -1)
+        class_features = x5.view(x5.shape[0], -1)
 
         if self.use_clinical_features and clinical_features is not None:
-            clinical_embedding = self.clinical_encoder(clinical_features)  # (batch, feature_dim)
-            class_features = class_features * (1 + clinical_embedding)  # FiLM: Modulate instead of adding
+            clinical_embedding = self.clinical_encoder(clinical_features)
+            class_features = class_features * (1 + clinical_embedding)
 
-        class_logits = self.classifier(class_features)  # Classification output
+        class_logits = self.classifier(class_features)
 
         return seg_logits, class_logits
 
