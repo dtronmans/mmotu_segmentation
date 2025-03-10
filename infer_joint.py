@@ -6,20 +6,22 @@ import numpy as np
 
 from hospital_lesion_dataset import HospitalLesionDataset, UnlabeledLesionDataset
 from joint_unet import transfer_unet_weights, UNetWithClassification
+from multimodal_hospital_lesion_dataset import MultimodalHospitalLesionDataset
 
 
 def infer_directory(model, dataloader, unlabeled=True):
     for batch in dataloader:
+        clinical_information = None
         if unlabeled:
             image, classification_labels = batch
         else:
-            image, masks, classification_labels = batch
-        predicted = model(image)
+            image, masks, classification_labels, clinical_information = batch
+        predicted = model(image, clinical_information)
 
         image_prediction = torch.sigmoid(predicted[0].squeeze())
         image_prediction = (image_prediction >= 0.5).float()
 
-        class_prediction = int(torch.sigmoid(predicted[1]) > 0.2)
+        class_prediction = int(torch.sigmoid(predicted[1]) > 0.5)
         # Convert image and mask to NumPy
         numpy_mask = image_prediction.detach().cpu().numpy()
         numpy_image = image.squeeze().permute(1, 2,
@@ -46,16 +48,19 @@ def infer_directory(model, dataloader, unlabeled=True):
 
 
 if __name__ == "__main__":
-    model = UNetWithClassification(3, 1, 1)
+    model = UNetWithClassification(3, 1, 1, use_clinical_features=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.load_state_dict(torch.load("joint_unet_no_haga.pt", weights_only=True, map_location=device))
+    model.load_state_dict(torch.load("multimodal_joint_unet_intermediate.pt", weights_only=True, map_location=device))
     model.eval()
     #
     transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])])
+        [transforms.ToTensor(), transforms.Resize((336, 544))])
     target_transform = transforms.ToTensor()
     #
-    dataset = UnlabeledLesionDataset("../util_scripts_2/image_datasets/lumc_rdg_png", transform=transform)
+    # dataset = UnlabeledLesionDataset("lesion_segmentation", transform)
+    dataset = MultimodalHospitalLesionDataset("lesion_segmentation", "lesion_segmentation/patient_attributes.csv",
+                                              transform, target_transform)
+
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
     #
-    infer_directory(model, dataloader, unlabeled=True)
+    infer_directory(model, dataloader, unlabeled=False)

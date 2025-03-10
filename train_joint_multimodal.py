@@ -41,6 +41,7 @@ if __name__ == "__main__":
     optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=0.0005, momentum=0.9)
     num_epochs = 300
 
+    best_val_loss = 100
     for epoch in range(num_epochs):
         model.train()
         train_loss = 0.0
@@ -82,7 +83,8 @@ if __name__ == "__main__":
         avg_val_loss = val_loss / len(val_loader)
 
         print(f"Epoch {epoch + 1}/{num_epochs}, Train Loss: {avg_train_loss:.4f}, Val Loss: {avg_val_loss:.4f}")
-        if (epoch + 1) % 5 == 0:
-            torch.save(model.state_dict(), "multimodal_joint_unet_intermediate.pt")
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            torch.save(model.state_dict(), "mutlimodal_joint_best.pt")
 
     torch.save(model.state_dict(), "multimodal_joint_unet.pt")
