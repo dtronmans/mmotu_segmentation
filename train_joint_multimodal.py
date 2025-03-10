@@ -1,3 +1,5 @@
+import os
+
 import torch
 from sklearn.model_selection import train_test_split
 from torch import optim
@@ -24,10 +26,13 @@ if __name__ == "__main__":
         transforms.Resize((336, 544))
     ])
 
+    db_path = os.path.join("/exports", "lkeb-hpc", "dzrogmans", "lesion_segmentation_multimodal", "lesion_segmentation")
+    csv_path = os.path.join(db_path, "patient_attributes.csv")
+
     dataset = MultimodalHospitalLesionDataset("lesion_segmentation", "lesion_segmentation/patient_attributes.csv",
                                               transform, target_transform)
 
-    train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2, random_state=42)
+    train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2008, random_state=42)
     train_dataset = torch.utils.data.Subset(dataset, train_indices)
     val_dataset = torch.utils.data.Subset(dataset, val_indices)
 
@@ -39,7 +44,7 @@ if __name__ == "__main__":
 
     losses = BCEWithLogitsLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.01, weight_decay=0.0005, momentum=0.9)
-    num_epochs = 300
+    num_epochs = 75
 
     best_val_loss = 100
     for epoch in range(num_epochs):
