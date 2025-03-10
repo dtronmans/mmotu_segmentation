@@ -6,8 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from tqdm import tqdm
 
-from hospital_lesion_dataset import HospitalLesionDataset
-from joint_unet import UNetWithClassification, transfer_unet_weights
+from joint_unet import UNetWithClassification
 from multimodal_hospital_lesion_dataset import MultimodalHospitalLesionDataset
 
 if __name__ == "__main__":
@@ -18,7 +17,7 @@ if __name__ == "__main__":
     transform = transforms.ToTensor()
     target_transform = transforms.ToTensor()
 
-    dataset = MultimodalHospitalLesionDataset("lesion_segmentation", "lesion_segmentation/patient_attributes",
+    dataset = MultimodalHospitalLesionDataset("lesion_segmentation", "lesion_segmentation/patient_attributes.csv",
                                               transform, target_transform)
 
     train_indices, val_indices = train_test_split(range(len(dataset)), test_size=0.2, random_state=42)

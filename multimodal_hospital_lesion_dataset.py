@@ -39,7 +39,7 @@ class MultimodalHospitalLesionDataset(Dataset):
                     self.image_paths.append(os.path.join(img_folder, img_file))
                     self.mask_paths.append(os.path.join(mask_folder, mask_file))
                     self.labels.append(malignancy)
-                    self.clinical_features.append([menopausal_status, hospital])
+                    self.clinical_features.append(torch.Tensor([menopausal_status, hospital]))
 
     def __len__(self):
         return len(self.image_paths)

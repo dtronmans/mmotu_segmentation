@@ -29,6 +29,8 @@ class UNetWithClassification(nn.Module):
 
         self.feature_dim = 1024 // factor
 
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+
         self.classifier = nn.Linear(self.feature_dim, num_classification_classes)
 
         # Clinical Features Encoding (Maps clinical features to the same space as x5)
@@ -54,7 +56,8 @@ class UNetWithClassification(nn.Module):
         x_seg = self.up4(x_seg, x1)
         seg_logits = self.outc(x_seg)
 
-        class_features = x5.view(x5.shape[0], -1)
+        x_pooled = self.global_pool(x5)
+        class_features = x_pooled.view(x_pooled.shape[0], -1)
 
         if self.use_clinical_features and clinical_features is not None:
             clinical_embedding = self.clinical_encoder(clinical_features)  # (batch, feature_dim)
